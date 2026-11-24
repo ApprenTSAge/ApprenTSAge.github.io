@@ -1,0 +1,148 @@
+(() => {
+  "use strict";
+
+  // Délais (en millisecondes)
+  const DELAI_CARTES_DIFFERENTES_MS = 900; // avant de recacher deux cartes différentes
+  const DELAI_FIN_MS = 1200;               // avant de passer à la suite une fois fini
+
+  const grid = document.getElementById("grid");
+  const nextButton = document.getElementById("next-exercise");
+
+  let first = null;   // première carte retournée
+  let locked = false; // bloque les clics pendant la comparaison
+  let matched = 0;
+  let totalPairs = 0;
+
+  function shuffle(array) {
+    const a = [...array];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  const isImagePath = (s) => /\.(png|jpe?g|gif|svg|webp)$/i.test(s);
+
+  function fillFace(face, value, isImage) {
+    if (isImage && isImagePath(value)) {
+      const img = document.createElement("img");
+      img.src = value;
+      img.alt = "";
+      face.append(img);
+    } else {
+      face.textContent = value;
+      if (isImage) face.classList.add("emoji");
+    }
+  }
+
+  function makeCard(card) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "card";
+    btn.dataset.pair = card.pairId;
+    btn.dataset.type = card.type;
+    btn.dataset.label = card.type === "image" ? "image" : card.content;
+    btn.setAttribute("aria-label", "Carte face cachée");
+
+    const inner = document.createElement("span");
+    inner.className = "inner";
+    const back = document.createElement("span");
+    back.className = "face back";
+    back.textContent = "?";
+    const front = document.createElement("span");
+    front.className = "face front";
+    fillFace(front, card.content, card.type === "image");
+    inner.append(back, front);
+    btn.append(inner);
+
+    btn.addEventListener("click", () => flip(btn));
+    return btn;
+  }
+
+  function flip(card) {
+    if (locked || card.classList.contains("flipped") || card.classList.contains("matched")) return;
+    card.classList.add("flipped");
+    card.setAttribute("aria-label", "Carte retournée : " + card.dataset.label);
+
+    if (!first) { first = card; return; }
+
+    const second = card;
+    const pairFirst = first;
+    first = null;
+    if (pairFirst.dataset.pair === second.dataset.pair) {
+      locked = true;
+      setTimeout(() => {
+        [pairFirst, second].forEach((c) => {
+          c.classList.add("matched");
+          c.setAttribute("aria-hidden", "true");
+        });
+        matched++;
+        if (matched === totalPairs) {
+          locked = true;
+          showResults();
+          setTimeout(() => {
+            nextButton.hidden = false;
+          }, DELAI_FIN_MS);
+        } else {
+          locked = false;
+        }
+      }, DELAI_CARTES_DIFFERENTES_MS);
+    } else {
+      locked = true; // verrou : évite de retourner une 3e carte
+      setTimeout(() => {
+        [pairFirst, second].forEach((c) => {
+          c.classList.remove("flipped");
+          c.setAttribute("aria-label", "Carte face cachée");
+        });
+        locked = false;
+      }, DELAI_CARTES_DIFFERENTES_MS);
+    }
+  }
+
+  async function start() {
+    first = null; locked = false; matched = 0;
+    nextButton.hidden = true;
+    grid.innerHTML = "";
+
+    let chosen;
+    try {
+      const exercise = await ExerciseGenerator.generate("memory");
+      chosen = exercise.propositions.elements.map((left) => ({
+        id: left,
+        image: left,
+        mot: exercise.bonne_reponse[left]
+      }));
+    } catch (error) {
+      console.warn("Générateur indisponible, données locales utilisées.", error);
+      totalPairs = Math.min(NB_PAIRES, DATA.length);
+      chosen = shuffle(DATA).slice(0, totalPairs);
+    }
+
+    totalPairs = chosen.length;
+    const cards = chosen.flatMap((p) => [
+      { pairId: p.id, type: "image", content: p.image },
+      { pairId: p.id, type: "word", content: p.mot }
+    ]);
+    grid.innerHTML = "";
+    shuffle(cards).forEach((c) => grid.append(makeCard(c)));
+  }
+
+  function showResults() {
+    const cards = [...grid.querySelectorAll(".card")];
+    cards.sort((a, b) => {
+      const pairOrder = a.dataset.pair.localeCompare(b.dataset.pair, undefined, { numeric: true });
+      if (pairOrder !== 0) return pairOrder;
+      return a.dataset.type === "image" ? -1 : 1;
+    });
+
+    cards.forEach((card) => {
+      card.classList.add("result-card");
+      card.removeAttribute("aria-hidden");
+    });
+    grid.replaceChildren(...cards);
+  }
+
+  nextButton.addEventListener("click", () => window.location.reload());
+  start();
+})();
