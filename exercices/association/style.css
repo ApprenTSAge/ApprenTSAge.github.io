@@ -88,7 +88,7 @@ main {
 .item .emoji { font-size: 2.2rem; line-height: 1; }
 
 .item.selected { border-color: var(--accent); box-shadow: 0 0 0 4px rgb(59 91 219 / .2); }
-.item.done { border-color: var(--c, var(--ok)); cursor: default; }
+.item.done { border-color: var(--c, var(--ok)); border-width: 3px; cursor: default; }
 .item.wrong { border-color: var(--ko); animation: shake .4s; }
 .item.dragging { opacity: .35; }
 .item.drop-target { border-color: var(--accent); background: #eef1ff; }
@@ -107,7 +107,7 @@ main {
 
 .answers:has(.answers-list:empty) { display: none; }
 .answers { margin-bottom: 28px; }
-.answers-list { display: grid; gap: 12px; }
+.answers-list { display: grid; gap: 12px; padding-bottom: 24px;}
 .answer-pair {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
