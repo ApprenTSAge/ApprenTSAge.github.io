@@ -73,7 +73,9 @@ body {
     cursor: pointer;
 }
 
-
+#exosMiss {
+    background-color: #cccccc;
+}
 
 h1 {
     font-size: 2.5rem;

@@ -157,7 +157,6 @@
     pair.append(imageEl, wordEl);
     answersList.prepend(pair);
     completedPairs += 1;
-
     if (completedPairs === pairs.length) {
       nextButton.hidden = false;
     }
